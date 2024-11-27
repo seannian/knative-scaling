@@ -1,0 +1,4 @@
+Run Number,Total Time (secs),Slowest Time (secs),Fastest Time (secs),Average Time (secs),Requests/sec,Total Data (bytes),Size/Request (bytes),10% Latency (secs),25% Latency (secs),50% Latency (secs),75% Latency (secs),90% Latency (secs),95% Latency (secs),99% Latency (secs),Status 200 Responses
+1,5.0448,0.1584,0.0009,0.0321,3112.1203,204100,13,0.0025,0.0296,0.0309,0.0334,0.0490,0.0611,0.0862,15700
+2,5.0435,0.1521,0.0009,0.0323,3093.4781,202826,13,0.0017,0.0298,0.0312,0.0335,0.0584,0.0626,0.0883,15602
+3,5.0433,0.2472,0.0009,0.0352,2839.6346,186173,13,0.0253,0.0310,0.0329,0.0355,0.0600,0.0674,0.1142,14321

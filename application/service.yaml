@@ -1,0 +1,22 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: rl-model-service
+  namespace: default  # Change if necessary
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "1"  # Optional: Prevent scale-to-zero
+    spec:
+      containers:
+        - image: seannian/rl-kubernetes-model:v2.1
+          ports:
+            - containerPort: 8003
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"

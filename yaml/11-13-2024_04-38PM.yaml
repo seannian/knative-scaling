@@ -1,0 +1,68 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  annotations:
+    serving.knative.dev/creator: minikube-user
+    serving.knative.dev/lastModifier: minikube-user
+  creationTimestamp: "2024-11-13T17:04:45Z"
+  generation: 7
+  name: hello
+  namespace: default
+  resourceVersion: "3312554"
+  uid: d61df2ad-ef3e-471d-9c85-ef13c8f98a67
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/max-scale: "1"
+        autoscaling.knative.dev/min-scale: "1"
+        autoscaling.knative.dev/scale-down-delay: 1m
+        autoscaling.knative.dev/scale-to-zero-grace-period: 10m
+        autoscaling.knative.dev/scale-up-delay: 0s
+        client.knative.dev/updateTimestamp: "2024-11-13T18:10:06Z"
+        client.knative.dev/user-image: ghcr.io/knative/helloworld-go:latest
+      creationTimestamp: null
+    spec:
+      containerConcurrency: 1
+      containers:
+      - env:
+        - name: TARGET
+          value: your_env_value
+        image: ghcr.io/knative/helloworld-go:latest
+        name: user-container
+        readinessProbe:
+          successThreshold: 1
+          tcpSocket:
+            port: 0
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 200m
+            memory: 256Mi
+      timeoutSeconds: 300
+  traffic:
+  - latestRevision: true
+    percent: 100
+status:
+  address:
+    url: http://hello.default.svc.cluster.local
+  conditions:
+  - lastTransitionTime: "2024-11-14T00:32:50Z"
+    status: "True"
+    type: ConfigurationsReady
+  - lastTransitionTime: "2024-11-14T00:32:50Z"
+    status: "True"
+    type: Ready
+  - lastTransitionTime: "2024-11-14T00:32:50Z"
+    status: "True"
+    type: RoutesReady
+  latestCreatedRevisionName: hello-00007
+  latestReadyRevisionName: hello-00007
+  observedGeneration: 7
+  traffic:
+  - latestRevision: true
+    percent: 100
+    revisionName: hello-00007
+  url: http://hello.default.127.0.0.1.sslip.io
