@@ -1,13 +1,23 @@
+import subprocess
+import yaml
+import time
+from get_resources import get_service_pod_resources
+from ML import get_action_from_model
+from get_current import get_knative_service_settings
+from send_requests import run_requests
+
 # -----------------------------------------------------------------------------
 # Function: parse_cpu
 # Description:
-#     Parses a CPU string and converts it to a numeric value in millicores.
-# 
+#     Parses a CPU string (e.g., "500m" or "1") and returns the value in millicores.
+#     If the string ends with 'm', it's treated as millicores directly. Otherwise,
+#     it's assumed to be cores and converted to millicores.
+#
 # Parameters:
-#     cpu_str (str): The CPU string (e.g., '100m' or '1').
-# 
+#     cpu_str (str): The CPU string to parse.
+#
 # Returns:
-#     float: CPU value in millicores.
+#     float: The CPU value in millicores.
 # -----------------------------------------------------------------------------
 def parse_cpu(cpu_str):
     if cpu_str.endswith('m'):
@@ -18,13 +28,15 @@ def parse_cpu(cpu_str):
 # -----------------------------------------------------------------------------
 # Function: parse_memory
 # Description:
-#     Parses a memory string and converts it to a numeric value in MiB.
-# 
+#     Parses a memory string (e.g., "256Mi", "1Gi") and returns the value in MiB.
+#     It supports units Ki, Mi, Gi, Ti and converts them to MiB. If no unit is found,
+#     it assumes the value is already in MiB.
+#
 # Parameters:
-#     mem_str (str): The memory string (e.g., '512Mi', '1Gi').
-# 
+#     mem_str (str): The memory string to parse.
+#
 # Returns:
-#     float: Memory value in MiB.
+#     float: The memory value in MiB.
 # -----------------------------------------------------------------------------
 def parse_memory(mem_str):
     units = {"Ki": 1/1024, "Mi": 1, "Gi": 1024, "Ti": 1048576}
@@ -36,24 +48,17 @@ def parse_memory(mem_str):
 # -----------------------------------------------------------------------------
 # Function: main
 # Description:
-#     Main function that orchestrates fetching Knative service settings,
-#     retrieving resource usage, invoking the ML model for action decisions,
-#     and applying scaling or resource adjustments based on the model's output.
-# 
+#     Main function of the pipeline script. It orchestrates fetching service
+#     settings, resource usage, getting action from ML model, and applying
+#     scaling actions based on the model's recommendation.
+#
 # Parameters:
 #     None
-# 
+#
 # Returns:
 #     None
 # -----------------------------------------------------------------------------
 def main():
-    import subprocess
-    import yaml
-    from get_resources import get_service_pod_resources
-    from ML import get_action_from_model
-    from get_current import get_knative_service_settings
-    from send_requests import run_requests
-
     NAMESPACE = "default"
     SERVICE_NAME = "hello"
 
@@ -63,14 +68,20 @@ def main():
         return
 
     min_scale, max_scale, cpu_request, memory_request, cpu_limit, memory_limit = settings
-    print(f"Initial settings fetched: min_scale={min_scale}, max_scale={max_scale}, cpu_request={cpu_request}, memory_request={memory_request}, cpu_limit={cpu_limit}, memory_limit={memory_limit}")
+    print(f"Initial settings fetched: min_scale={min_scale}, max_scale={max_scale}, "
+          f"cpu_request={cpu_request}, memory_request={memory_request}, "
+          f"cpu_limit={cpu_limit}, memory_limit={memory_limit}")
 
     cpu_request_val = parse_cpu(cpu_request)
     memory_request_val = parse_memory(memory_request)
     cpu_limit_val = parse_cpu(cpu_limit)
     memory_limit_val = parse_memory(memory_limit)
 
-    total_cpu_usage, total_memory_usage = get_service_pod_resources(namespace=NAMESPACE, service_name=SERVICE_NAME)
+    concurrency, latency = run_requests()
+
+    total_cpu_usage, total_memory_usage = get_service_pod_resources(
+        namespace=NAMESPACE, service_name=SERVICE_NAME
+    )
 
     if total_cpu_usage is not None and total_memory_usage is not None:
         total_memory_usage_mi = total_memory_usage / (1024 * 1024)
@@ -83,12 +94,10 @@ def main():
 
         print(f"pipeline.py: Number of Pods: {num_pods}, CPU per Pod: {cpu_per_pod}m, Memory per Pod: {mem_per_pod}Mi")
 
-        traffic_per_second, latency = run_requests()
-
         action = get_action_from_model(
             cpu_usage=total_cpu_usage,
             memory_usage=total_memory_usage_mi,
-            traffic_per_second=traffic_per_second,
+            concurrency=concurrency,
             latency=latency,
             num_pods=num_pods,
             cpu_per_pod=cpu_per_pod,
@@ -103,6 +112,7 @@ def main():
 
         if action == 0:
             print("pipeline.py: No action needed.")
+            pass
         elif action == 1:
             max_scale += 1
             min_scale = max_scale

@@ -1,0 +1,72 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  annotations:
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"serving.knative.dev/v1","kind":"Service","metadata":{"annotations":{"serving.knative.dev/creator":"minikube-user","serving.knative.dev/lastModifier":"minikube-user"},"creationTimestamp":"2025-01-05T05:36:09Z","generation":7,"name":"hello","namespace":"default","resourceVersion":"91507","uid":"8633bdff-b367-4dee-ace7-06c279e6ec58"},"spec":{"template":{"metadata":{"annotations":{"autoscaling.knative.dev/class":"hpa.autoscaling.knative.dev","autoscaling.knative.dev/metric":"cpu","autoscaling.knative.dev/target":"50","client.knative.dev/updateTimestamp":"2025-01-05T05:36:09Z","client.knative.dev/user-image":"ghcr.io/knative/helloworld-go:latest"},"creationTimestamp":null},"spec":{"containerConcurrency":10,"containers":[{"env":[{"name":"TARGET","value":"concurrent5"}],"image":"ghcr.io/knative/helloworld-go:latest","name":"user-container","ports":[{"containerPort":8080,"protocol":"TCP"}],"readinessProbe":{"successThreshold":1,"tcpSocket":{"port":0}},"resources":{"limits":{"cpu":"500m","memory":"256Mi"},"requests":{"cpu":"250m","memory":"128Mi"}}}],"enableServiceLinks":false,"timeoutSeconds":300}},"traffic":[{"latestRevision":true,"percent":100}]},"status":{"address":{"url":"http://hello.default.svc.cluster.local"},"conditions":[{"lastTransitionTime":"2025-01-06T04:28:11Z","status":"True","type":"ConfigurationsReady"},{"lastTransitionTime":"2025-01-06T04:28:11Z","status":"True","type":"Ready"},{"lastTransitionTime":"2025-01-06T04:28:11Z","status":"True","type":"RoutesReady"}],"latestCreatedRevisionName":"hello-00007","latestReadyRevisionName":"hello-00007","observedGeneration":7,"traffic":[{"latestRevision":true,"percent":100,"revisionName":"hello-00007"}],"url":"http://hello.default.127.0.0.1.sslip.io"}}
+    serving.knative.dev/creator: minikube-user
+    serving.knative.dev/lastModifier: minikube-user
+  creationTimestamp: "2025-01-05T05:36:09Z"
+  generation: 8
+  name: hello
+  namespace: default
+  resourceVersion: "98049"
+  uid: 8633bdff-b367-4dee-ace7-06c279e6ec58
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/class: hpa.autoscaling.knative.dev
+        autoscaling.knative.dev/metric: cpu
+        autoscaling.knative.dev/target: "80"
+        client.knative.dev/updateTimestamp: "2025-01-05T05:36:09Z"
+        client.knative.dev/user-image: ghcr.io/knative/helloworld-go:latest
+      creationTimestamp: null
+    spec:
+      containerConcurrency: 10
+      containers:
+      - env:
+        - name: TARGET
+          value: concurrent5
+        image: ghcr.io/knative/helloworld-go:latest
+        name: user-container
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        readinessProbe:
+          successThreshold: 1
+          tcpSocket:
+            port: 0
+        resources:
+          limits:
+            cpu: 500m
+            memory: 256Mi
+          requests:
+            cpu: 250m
+            memory: 128Mi
+      enableServiceLinks: false
+      timeoutSeconds: 300
+  traffic:
+  - latestRevision: true
+    percent: 100
+status:
+  address:
+    url: http://hello.default.svc.cluster.local
+  conditions:
+  - lastTransitionTime: "2025-01-06T04:30:03Z"
+    status: "True"
+    type: ConfigurationsReady
+  - lastTransitionTime: "2025-01-06T04:46:50Z"
+    status: "True"
+    type: Ready
+  - lastTransitionTime: "2025-01-06T04:46:50Z"
+    status: "True"
+    type: RoutesReady
+  latestCreatedRevisionName: hello-00008
+  latestReadyRevisionName: hello-00008
+  observedGeneration: 8
+  traffic:
+  - latestRevision: true
+    percent: 100
+    revisionName: hello-00008
+  url: http://hello.default.127.0.0.1.sslip.io

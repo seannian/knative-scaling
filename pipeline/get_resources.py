@@ -5,15 +5,20 @@ from kubernetes.client.rest import ApiException
 # -----------------------------------------------------------------------------
 # Function: get_service_pod_resources
 # Description:
-#     Retrieves the CPU and memory resource usage for pods of a specified Knative
-#     service in a given namespace.
-# 
+#     Retrieves and calculates the total and average CPU and memory usage
+#     for all pods associated with a given Knative service in a specified
+#     namespace. It uses the Kubernetes metrics API to fetch resource usage
+#     and calculates the total and average consumption.
+#
 # Parameters:
-#     namespace (str): The namespace in which the Knative service is running.
-#     service_name (str): The name of the Knative service.
-# 
+#     namespace (str): Kubernetes namespace where the service is located.
+#     service_name (str): Name of the Knative service.
+#
 # Returns:
-#     tuple: A tuple containing average CPU usage (millicores) and memory usage (MiB).
+#     tuple: A tuple containing:
+#         - total_cpu_usage (float): Total CPU usage in millicores for all pods of the service.
+#         - total_memory_usage (float): Total memory usage in bytes for all pods of the service.
+#         Returns (0, 0) if no pods are found for the service or if there is an API error.
 # -----------------------------------------------------------------------------
 def get_service_pod_resources(namespace, service_name):
     print(f"Getting resource usage for service '{service_name}' in namespace '{namespace}'...")
@@ -76,7 +81,7 @@ def get_service_pod_resources(namespace, service_name):
         print(f"\nAverage CPU Usage for service '{service_name}': {avg_cpu_usage:.2f} m")
         print(f"Average Memory Usage for service '{service_name}': {avg_memory_usage / (1024 ** 2):.2f} Mi")
 
-        return avg_cpu_usage, avg_memory_usage
+        return total_cpu_usage, total_memory_usage
 
     except ApiException as e:
         print(f"Failed to get resource usage: {e}")
@@ -85,13 +90,15 @@ def get_service_pod_resources(namespace, service_name):
 # -----------------------------------------------------------------------------
 # Function: parse_cpu_usage
 # Description:
-#     Parses a CPU usage string and converts it to millicores.
-# 
+#     Parses a CPU usage string from Kubernetes metrics API and converts it
+#     to millicores. The CPU usage string can be in nano cores (n), micro cores (u),
+#     millicores (m), or cores (no unit).
+#
 # Parameters:
-#     cpu_str (str): The CPU usage string.
-# 
+#     cpu_str (str): CPU usage string from Kubernetes metrics API.
+#
 # Returns:
-#     float: The CPU usage value in millicores.
+#     float: CPU usage in millicores.
 # -----------------------------------------------------------------------------
 def parse_cpu_usage(cpu_str):
     if cpu_str.endswith('n'):
@@ -102,18 +109,20 @@ def parse_cpu_usage(cpu_str):
         value = float(cpu_str[:-1])
     else:
         value = float(cpu_str) * 1000
+
     return value
 
 # -----------------------------------------------------------------------------
 # Function: parse_memory_usage
 # Description:
-#     Parses a memory usage string and converts it to bytes.
-# 
+#     Parses a memory usage string from Kubernetes metrics API and converts it
+#     to bytes. The memory usage string can be in Ki, Mi, Gi, Ti, K, M, G, T.
+#
 # Parameters:
-#     memory_str (str): The memory usage string.
-# 
+#     memory_str (str): Memory usage string from Kubernetes metrics API.
+#
 # Returns:
-#     float: The memory usage value in bytes.
+#     float: Memory usage in bytes.
 # -----------------------------------------------------------------------------
 def parse_memory_usage(memory_str):
     units = {'Ki': 1024, 'Mi': 1024**2, 'Gi': 1024**3, 'Ti': 1024**4,

@@ -1,29 +1,32 @@
 import sys
 import argparse
+import subprocess
 from kubernetes import client, config
 
 # -----------------------------------------------------------------------------
 # Function: update_knative_service_all
 # Description:
-#     Updates various settings of a Knative service, including scaling, container
-#     concurrency, resource requests, and environment variables.
-# 
+#     Updates the configuration of a Knative service in a specified namespace.
+#     It retrieves the existing service definition, modifies it with new
+#     autoscaling parameters, resource requests/limits, environment variables,
+#     and updates the service in the Kubernetes cluster.
+#
 # Parameters:
-#     namespace (str): The namespace of the Knative service.
-#     service_name (str): The name of the Knative service.
+#     namespace (str): Kubernetes namespace where the service is located.
+#     service_name (str): Name of the Knative service to update.
 #     scale_to_zero_grace_period (str): Grace period before scaling to zero.
 #     scale_up_delay (str): Delay before scaling up.
 #     scale_down_delay (str): Delay before scaling down.
-#     container_concurrency (int): Concurrency level for the container.
-#     min_scale (int): Minimum number of pods.
-#     max_scale (int): Maximum number of pods.
+#     container_concurrency (int): Container concurrency setting.
+#     min_scale (int): Minimum number of replicas.
+#     max_scale (int): Maximum number of replicas.
 #     env_var (str): Value for the TARGET environment variable.
 #     cpu_request (str): CPU request for the container.
 #     memory_request (str): Memory request for the container.
 #     cpu_limit (str): CPU limit for the container.
 #     memory_limit (str): Memory limit for the container.
-#     send_traffic_to_latest (bool): Whether to send all traffic to the latest revision.
-# 
+#     send_traffic_to_latest (bool, optional): Whether to send traffic to the latest revision. Defaults to True.
+#
 # Returns:
 #     None
 # -----------------------------------------------------------------------------
@@ -132,18 +135,87 @@ def update_knative_service_all(namespace, service_name,
         sys.exit(1)
 
 # -----------------------------------------------------------------------------
+# Function: delete_old_revisions
+# Description:
+#     Deletes older revisions of a Knative service in a given namespace,
+#     keeping only the latest revision. It identifies the latest revision
+#     based on the service's status and then uses kubectl to delete all other
+#     revisions associated with the service.
+#
+# Parameters:
+#     namespace (str): Kubernetes namespace where the service is located.
+#     service_name (str): Name of the Knative service.
+#
+# Returns:
+#     None
+# -----------------------------------------------------------------------------
+def delete_old_revisions(namespace, service_name):
+    try:
+        config.load_kube_config()
+        api = client.CustomObjectsApi()
+
+        service_obj = api.get_namespaced_custom_object(
+            group="serving.knative.dev",
+            version="v1",
+            namespace=namespace,
+            plural="services",
+            name=service_name
+        )
+
+        latest_revision_name = service_obj.get("status", {}).get("latestCreatedRevisionName")
+        if not latest_revision_name:
+            print(f"Could not find 'latestCreatedRevisionName' in service '{service_name}'.")
+            return
+
+        print(f"Latest revision for '{service_name}' according to Knative is: {latest_revision_name}")
+
+        revisions = api.list_namespaced_custom_object(
+            group="serving.knative.dev",
+            version="v1",
+            namespace=namespace,
+            plural="revisions",
+        )
+
+        service_revisions = [
+            rev for rev in revisions['items']
+            if rev['metadata']['labels'].get('serving.knative.dev/service') == service_name
+        ]
+
+        if not service_revisions:
+            print(f"No revisions found for service '{service_name}' in namespace '{namespace}'.")
+            return
+
+        for rev in service_revisions:
+            rev_name = rev['metadata']['name']
+            if rev_name != latest_revision_name:
+                print(f"Deleting old revision: {rev_name}")
+                try:
+                    subprocess.run(
+                        ["kubectl", "delete", "revision", rev_name, "-n", namespace],
+                        check=True,
+                        text=True
+                    )
+                except subprocess.CalledProcessError as e:
+                    print(f"Error deleting revision {rev_name}: {e}")
+
+    except Exception as e:
+        print(f"Failed to delete old revisions: {e}")
+
+# -----------------------------------------------------------------------------
 # Function: main
 # Description:
-#     Main function to parse arguments and update a Knative service.
-# 
+#     Main function of the script. It parses command-line arguments,
+#     calls the function to update the Knative service configuration,
+#     and then calls the function to delete old revisions of the service.
+#
 # Parameters:
 #     None
-# 
+#
 # Returns:
 #     None
 # -----------------------------------------------------------------------------
 def main():
-    parser = argparse.ArgumentParser(description='Update a Knative service with custom parameters.')
+    parser = argparse.ArgumentParser(description='Update a Knative service and delete old revisions.')
     parser.add_argument('--namespace', type=str, required=True, help='Namespace of the Knative service')
     parser.add_argument('--service-name', type=str, required=True, help='Name of the Knative service')
     parser.add_argument('--scale-to-zero-grace-period', type=str, required=True, help='Time before scaling to zero (e.g., 10m)')
@@ -177,6 +249,8 @@ def main():
         memory_limit=args.memory_limit,
         send_traffic_to_latest=args.send_traffic_to_latest
     )
+
+    delete_old_revisions(namespace=args.namespace, service_name=args.service_name)
 
 if __name__ == "__main__":
     main()
